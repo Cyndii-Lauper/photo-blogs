@@ -219,7 +219,7 @@ export const tagMultiplePhotosAction = (
 export const deletePhotosAction = async (photoIds: string[]) =>
   runAuthenticatedAdminServerAction(async () => {
     for (const photoId of photoIds) {
-      const photo = await getPhoto(photoId);
+      const photo = await getPhoto(photoId, true);
       if (photo) {
         await deletePhoto(photoId).then(() => deleteFile(photo.url));
       }
@@ -259,14 +259,6 @@ export const deletePhotoAction = async (
     }
   });
 
-export const deletePhotoFormAction = async (formData: FormData) =>
-  runAuthenticatedAdminServerAction(() =>
-    deletePhotoAction(
-      formData.get('id') as string,
-      formData.get('url') as string,
-    )
-  );
-
 export const deletePhotoTagGloballyAction = async (formData: FormData) =>
   runAuthenticatedAdminServerAction(async () => {
     const tag = formData.get('tag') as string;
@@ -290,15 +282,10 @@ export const renamePhotoTagGloballyAction = async (formData: FormData) =>
     }
   });
 
-export const deleteBlobPhotoAction = async (formData: FormData) =>
+export const deleteUploadAction = async (url: string) =>
   runAuthenticatedAdminServerAction(async () => {
-    await deleteFile(formData.get('url') as string);
-
+    await deleteFile(url);
     revalidateAdminPaths();
-
-    if (formData.get('redirectToPhotos') === 'true') {
-      redirect(PATH_ADMIN_PHOTOS);
-    }
   });
 
 // Accessed from admin photo edit page
