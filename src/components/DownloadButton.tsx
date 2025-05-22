@@ -3,26 +3,26 @@ import { clsx } from 'clsx/lite';
 import { downloadFileNameForPhoto, Photo } from '@/photo';
 import LoaderButton from './primitives/LoaderButton';
 import { useState } from 'react';
+import { downloadFileFromBrowser } from '@/utility/url';
+import { useAppText } from '@/i18n/state/client';
 
 export default function DownloadButton({
   photo,
-  dim,
   className,
 }: {
   photo: Photo
-  dim?: boolean
   className?: string
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
+  const appText = useAppText();
+
   return (
     <LoaderButton
-      title="Download Original File"
+      tooltip={appText.tooltip.download}
       className={clsx(
         className,
-        dim ? 'text-dim' : 'text-medium',
-        '-mx-0.5 translate-x-0.5',
-        'sm:mx-0 sm:translate-x-0'
+        'text-medium',
       )}
       icon={<MdOutlineFileDownload size={18} />}
       spinnerColor='dim'
@@ -30,18 +30,10 @@ export default function DownloadButton({
       isLoading={isLoading}
       onClick={async () => {
         setIsLoading(true);
-        const blob = await fetch(photo.url)
-          .then(response => response.blob())
+        downloadFileFromBrowser(photo.url, downloadFileNameForPhoto(photo))
           .finally(() => setIsLoading(false));
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = downloadFileNameForPhoto(photo);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
       }}
+      hideFocusOutline
     />
   );
 }

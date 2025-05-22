@@ -1,4 +1,6 @@
 import type { Photo } from '@/photo';
+import { isCameraMakeApple } from '@/platforms/apple';
+import { formatSonyModel, isMakeSony } from '@/platforms/sony';
 import { parameterize } from '@/utility/string';
 
 const CAMERA_PLACEHOLDER: Camera = { make: 'Camera', model: 'Model' };
@@ -9,11 +11,11 @@ export type Camera = {
 };
 
 export interface CameraProps {
-  params: Camera
+  params: Promise<Camera>
 }
 
 export interface PhotoCameraProps {
-  params: Camera & { photoId: string }
+  params: Promise<Camera & { photoId: string }>
 }
 
 export type CameraWithCount = {
@@ -24,18 +26,19 @@ export type CameraWithCount = {
 
 export type Cameras = CameraWithCount[];
 
-export const createCameraKey = ({ make, model }: Camera) =>
-  parameterize(`${make}-${model}`, true);
+// Support keys for make-only and model-only camera queries
+export const createCameraKey = ({ make, model }: Partial<Camera>) =>
+  parameterize(`${make ?? 'ANY'}-${model ?? 'ANY'}`);
 
-export const getCameraFromParams = ({
+export const formatCameraParams = ({
   make,
   model,
 }: {
   make: string,
   model: string,
 }): Camera => ({
-  make: parameterize(make, true),
-  model: parameterize(model, true),
+  make: parameterize(make),
+  model: parameterize(model),
 });
 
 export const sortCamerasWithCount = (
@@ -56,27 +59,37 @@ export const cameraFromPhoto = (
     : fallback ?? CAMERA_PLACEHOLDER;
 
 export const formatCameraText = (
-  { make: makeRaw, model: modelRaw }: Camera,
-  includeMake: 'always' | 'never' | 'if-not-apple' = 'if-not-apple',
-  removeIPhoneOnLongModels?: boolean
+  { make, model: _model }: Camera,
+  length:
+    'long' |    // Unmodified make and model
+    'medium' |  // Make and model, with modifiers removed
+    'short'     // Model only
+  = 'medium',
 ) => {
-  // Remove 'Corporation' from makes like 'Nikon Corporation'
-  const make = makeRaw.replace(/ Corporation/i, '');
-  // Remove potential duplicate make from model
-  let model = modelRaw.replace(`${make} `, '');
-  if (
-    removeIPhoneOnLongModels &&
-    model.includes('iPhone') &&
-    model.length > 9
-  ) {
-    model = model.replace(/iPhone\s*/i, '');
+  // Capture simple make without modifiers like 'Corporation' or 'Company'
+  const makeSimple = make.match(/^(\S+)/)?.[1];
+  let model = isMakeSony(make) ? formatSonyModel(_model) : _model;
+  const doesModelStartWithMake = (
+    makeSimple &&
+    model.toLocaleLowerCase().startsWith(makeSimple.toLocaleLowerCase())
+  );
+  switch (length) {
+  case 'long':
+    return `${make} ${model}`;
+  case 'medium':
+    return doesModelStartWithMake || isCameraMakeApple(make)
+      ? model
+      : `${make} ${model}`;
+  case 'short':
+    model = doesModelStartWithMake
+      ? model.replace(makeSimple, '').trim()
+      : model;
+    if (
+      model.includes('iPhone') &&
+      model.length > 9
+    ) {
+      model = model.replace(/iPhone\s*/i, '');
+    }
+    return model;
   }
-  return (
-    includeMake === 'never' || 
-    includeMake === 'if-not-apple' && make === 'Apple'
-  ) ? model
-    : `${make} ${model}`;
 };
-
-export const formatCameraModelTextShort = (camera: Camera) =>
-  formatCameraText(camera, 'never', true);

@@ -1,7 +1,6 @@
-import { ComponentProps, ReactNode } from 'react';
+import { ReactNode } from 'react';
 import Icon from './Icon';
 import { clsx } from 'clsx/lite';
-import Link from 'next/link';
 
 export type LabeledIconType =
   'icon-first' |
@@ -12,49 +11,47 @@ export type LabeledIconType =
 export default function LabeledIcon({
   icon,
   type = 'icon-first',
-  className: classNameProp,
+  className,
+  classNameIcon,
   children,
   iconWide,
-  href,
-  prefetch,
+  uppercase = true,
   debug,
 }: {
   icon?: ReactNode,
   type?: LabeledIconType,
   className?: string,
+  classNameIcon?: string,
   children: ReactNode,
   iconWide?:boolean,
+  uppercase?: boolean,
   debug?: boolean,
-} & Partial<ComponentProps<typeof Link>>) {
-  const className = clsx(
-    'inline-flex gap-x-1 md:gap-x-1.5',
-    classNameProp,
-    debug && 'border border-green-500 m-[-1px]',
+}) {
+  return (
+    <span className={clsx(
+      'inline-flex gap-x-1.5 md:gap-x-2 min-w-0',
+      debug && 'border border-green-500 m-[-1px]',
+      className,
+    )}>
+      {icon && type !== 'text-only' &&
+        <Icon {...{
+          className: clsx(
+            type === 'icon-last' && 'order-1',
+            classNameIcon,
+          ),
+          wide: iconWide,
+          debug,
+        }}>
+          {icon}
+        </Icon>}
+      {children && type !== 'icon-only' &&
+        <span className={clsx(
+          'overflow-hidden',
+          uppercase && 'uppercase',
+          debug && 'bg-gray-300 dark:bg-gray-700',
+        )}>
+          {children}
+        </span>}
+    </span>
   );
-
-  const renderContent = () => <>
-    {icon && type !== 'text-only' &&
-      <Icon {...{
-        className: clsx(type === 'icon-last' && 'order-1'),
-        wide: iconWide,
-        debug,
-      }}>
-        {icon}
-      </Icon>}
-    {children && type !== 'icon-only' &&
-      <span className={clsx(
-        'uppercase',
-        debug && 'bg-gray-700'
-      )}>
-        {children}
-      </span>}
-  </>;
-  
-  return href
-    ? <Link {...{ href, prefetch, className }}>
-      {renderContent()}
-    </Link>
-    : <div {...{ className }}>
-      {renderContent()}
-    </div>;
 }

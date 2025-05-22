@@ -4,7 +4,8 @@ import { Photo } from '@/photo';
 import {
   NextImageSize,
   getNextImageUrlForRequest,
-} from '@/services/next-image';
+} from '@/platforms/next-image';
+import { IS_PREVIEW } from '@/app/config';
 
 export default function ImagePhotoGrid({
   photos,
@@ -12,12 +13,14 @@ export default function ImagePhotoGrid({
   widthArbitrary,
   height,
   imagePosition = 'center',
-  gap = 4,
+  gap = 0,
+  imageStyle,
 }: ({
   photos: Photo[]
   height: number
   imagePosition?: 'center' | 'top'
   gap?: number
+  imageStyle?: React.CSSProperties
 } & (
   { width: NextImageSize, widthArbitrary?: undefined } |
   { width?: undefined, widthArbitrary: number }
@@ -45,13 +48,15 @@ export default function ImagePhotoGrid({
     (rows - 1) * gap / rows;
 
   return (
-    <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap,
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap,
+      }}
+    >
       {photos.slice(0, count).map(({ id, url }) =>
         <div
           key={id}
@@ -64,8 +69,13 @@ export default function ImagePhotoGrid({
           }}
         >
           <img {...{
-            src: getNextImageUrlForRequest(url, nextImageWidth),
+            src: getNextImageUrlForRequest({
+              imageUrl: url,
+              size: nextImageWidth,
+              addBypassSecret: IS_PREVIEW,
+            }),
             style: {
+              ...imageStyle,
               width: '100%',
               ...imagePosition === 'center' && {
                 height: '100%',
@@ -73,7 +83,7 @@ export default function ImagePhotoGrid({
               objectFit: 'cover',
             },
           }} />
-        </div>
+        </div>,
       )}
     </div>
   );

@@ -8,19 +8,21 @@ import {
   absolutePathForTag,
   absolutePathForTagImage,
   getPathComponents,
-} from '@/site/paths';
+} from '@/app/paths';
 import {
   capitalizeWords,
   convertStringToArray,
   formatCount,
   formatCountDescriptive,
 } from '@/utility/string';
+import { sortCategoryByCount } from '@/category';
+import { AppTextState } from '@/i18n/state';
 
 // Reserved tags
 export const TAG_FAVS   = 'favs';
 export const TAG_HIDDEN = 'hidden';
 
-export type TagsWithMeta = {
+export type Tags = {
   tag: string
   count: number
 }[]
@@ -40,44 +42,69 @@ export const getValidationMessageForTags = (tags?: string) => {
 export const titleForTag = (
   tag: string,
   photos:Photo[] = [],
+  appText: AppTextState,
   explicitCount?: number,
 ) => [
   formatTag(tag),
-  photoQuantityText(explicitCount ?? photos.length),
+  photoQuantityText(explicitCount ?? photos.length, appText),
 ].join(' ');
 
-export const shareTextForTag = (tag: string) =>
-  isTagFavs(tag) ? 'Favorite photos' : `Photos tagged '${formatTag(tag)}'`;
+export const shareTextForTag = (
+  tag: string,
+  appText: AppTextState,
+) =>
+  isTagFavs(tag)
+    ? appText.category.taggedFavs
+    : appText.category.taggedPhrase(formatTag(tag));
 
-export const sortTags = (
+export const sortTagsArray = (
   tags: string[],
-  tagToHide?: string,
+  tagToExclude?: string,
 ) => tags
-  .filter(tag => tag !== tagToHide)
+  .filter(tag => tag !== tagToExclude)
   .sort((a, b) => isTagFavs(a) ? -1 : a.localeCompare(b));
 
-export const sortTagsObject = (
-  tags: TagsWithMeta,
-  tagToHide?: string,
+export const sortTags = (
+  tags: Tags,
+  tagToExclude?: string,
 ) => tags
-  .filter(({ tag }) => tag!== tagToHide)
-  .sort(({ tag: a }, { tag: b }) => isTagFavs(a) ? -1 : a.localeCompare(b));
+  .filter(({ tag }) => tag!== tagToExclude)
+  .sort(({ tag: a }, { tag: b }) =>
+    isTagFavs(a)
+      ? -1
+      : isTagFavs(b)
+        ? 1
+        : a.localeCompare(b));
+
+export const sortTagsByCount = (
+  tags: Tags,
+  tagToExclude?: string,
+) => tags
+  .filter(({ tag }) => tag !== tagToExclude)
+  .sort(({ tag: tagA, count: countA }, { tag: tagB, count: countB }) =>
+    isTagFavs(tagA)
+      ? -1
+      : isTagFavs(tagB)
+        ? 1
+        : countB - countA);
 
 export const sortTagsWithoutFavs = (tags: string[]) =>
-  sortTags(tags, TAG_FAVS);
+  sortTagsArray(tags, TAG_FAVS);
 
-export const sortTagsObjectWithoutFavs = (tags: TagsWithMeta) =>
-  sortTagsObject(tags, TAG_FAVS);
+export const sortTagsObjectWithoutFavs = (tags: Tags) =>
+  sortTags(tags, TAG_FAVS);
 
 export const descriptionForTaggedPhotos = (
   photos: Photo[] = [],
+  appText: AppTextState,
   dateBased?: boolean,
   explicitCount?: number,
   explicitDateRange?: PhotoDateRange,
 ) =>
   descriptionForPhotoSet(
     photos,
-    'tagged',
+    appText,
+    appText.category.taggedPhotos,
     dateBased,
     explicitCount,
     explicitDateRange,
@@ -86,13 +113,19 @@ export const descriptionForTaggedPhotos = (
 export const generateMetaForTag = (
   tag: string,
   photos: Photo[],
+  appText: AppTextState,
   explicitCount?: number,
   explicitDateRange?: PhotoDateRange,
 ) => ({
   url: absolutePathForTag(tag),
-  title: titleForTag(tag, photos, explicitCount),
-  description:
-    descriptionForTaggedPhotos(photos, true, explicitCount, explicitDateRange),
+  title: titleForTag(tag, photos, appText, explicitCount),
+  description: descriptionForTaggedPhotos(
+    photos,
+    appText,
+    true,
+    explicitCount,
+    explicitDateRange,
+  ),
   images: absolutePathForTagImage(tag),
 });
 
@@ -105,21 +138,25 @@ export const isPathFavs = (pathname?: string) =>
 
 export const isTagHidden = (tag: string) => tag.toLowerCase() === TAG_HIDDEN;
 
-export const addHiddenToTags = (tags: TagsWithMeta, hiddenPhotosCount = 0) => {
-  if (hiddenPhotosCount > 0) {
-    return tags
+export const addHiddenToTags = (tags: Tags, photosCountHidden = 0) =>
+  photosCountHidden > 0
+    ? tags
       .filter(({ tag }) => tag === TAG_FAVS)
-      .concat({ tag: TAG_HIDDEN, count: hiddenPhotosCount })
-      .concat(tags.filter(({ tag }) => tag !== TAG_FAVS));
-  } else {
-    return tags;
-  }
-};
+      .concat({ tag: TAG_HIDDEN, count: photosCountHidden })
+      .concat(tags
+        .filter(({ tag }) => tag !== TAG_FAVS)
+        .sort(sortCategoryByCount),
+      )
+    : tags;
 
-export const convertTagsForForm = (tags: TagsWithMeta = []) =>
+export const convertTagsForForm = (
+  tags: Tags = [],
+  appText: AppTextState,
+) =>
   sortTagsObjectWithoutFavs(tags)
     .map(({ tag, count }) => ({
       value: tag,
       annotation: formatCount(count),
-      annotationAria: formatCountDescriptive(count, 'tagged'),
+      annotationAria:
+        formatCountDescriptive(count, appText.category.taggedPhotos),
     }));

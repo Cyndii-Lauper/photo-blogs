@@ -5,7 +5,7 @@ export default function Badge({
   className,
   type = 'large',
   dimContent,
-  highContrast,
+  contrast = 'low',
   uppercase,
   interactive,
 }: {
@@ -13,7 +13,7 @@ export default function Badge({
   className?: string
   type?: 'large' | 'small' | 'text-only'
   dimContent?: boolean
-  highContrast?: boolean
+  contrast?: 'low' | 'medium' | 'high' | 'frosted'
   uppercase?: boolean
   interactive?: boolean
 }) {
@@ -21,36 +21,45 @@ export default function Badge({
     switch (type) {
     case 'large':
       return clsx(
-        'px-1.5 py-[0.3rem] rounded-md',
-        'bg-gray-100/80 dark:bg-gray-900/80',
-        'border border-gray-200/60 dark:border-gray-800/75',
+        'px-1.5 h-[26px]',
+        'rounded-md',
+        'bg-gray-100/40 dark:bg-gray-900/60',
+        'border border-medium',
       );
     case 'small':
       return clsx(
-        'h-max-baseline',
-        'block',
-        'px-[6px] py-[5px]',
+        'px-[5px] h-[17px] md:h-[18px]',
         'text-[0.7rem] font-medium rounded-[0.25rem]',
-        highContrast
+        contrast === 'high'
           ? 'text-invert bg-invert'
-          : 'text-medium bg-gray-300/30 dark:bg-gray-700/50',
-        interactive && highContrast
+          : contrast === 'frosted'
+            ? 'text-black bg-neutral-100/30 border border-neutral-200/40'
+            : 'text-medium bg-gray-300/30 dark:bg-gray-700/50',
+        interactive && (contrast === 'high'
           ? 'hover:opacity-70'
-          : 'hover:text-gray-900 dark:hover:text-gray-100',
-        interactive && highContrast
+          : contrast === 'frosted'
+            ? 'hover:text-black dark:hover:text-black'
+            : 'hover:text-gray-900 dark:hover:text-gray-100'),
+        interactive && (contrast === 'high'
           ? 'active:opacity-90'
-          : 'active:bg-gray-200 dark:active:bg-gray-700/60',
+          : contrast === 'frosted'
+            ? 'active:bg-neutral-100/50 dark:active:bg-neutral-900/10'
+            : 'active:bg-gray-200 dark:active:bg-gray-700/60'),
       );
     }
   };
   return (
     <span className={clsx(
-      'leading-none',
+      'max-w-full',
+      'inline-flex items-center',
       stylesForType(),
       uppercase && 'uppercase tracking-wider',
       className,
     )}>
-      <span className={clsx(dimContent && 'opacity-50')}>
+      <span className={clsx(
+        'max-w-full truncate',
+        dimContent && 'opacity-50',
+      )}>
         {children}
       </span>
     </span>

@@ -1,8 +1,6 @@
 import { Photo, PhotoDateRange } from '@/photo';
-import { Camera, Cameras, createCameraKey } from '.';
+import { Camera, createCameraKey } from '.';
 import CameraHeader from './CameraHeader';
-import { FilmSimulations } from '@/simulation';
-import { TagsWithMeta } from '@/tag';
 import PhotoGridContainer from '@/photo/PhotoGridContainer';
 
 export default function CameraOverview({
@@ -11,34 +9,26 @@ export default function CameraOverview({
   count,
   dateRange,
   animateOnFirstLoadOnly,
-  tags,
-  cameras,
-  simulations,
 }: {
   camera: Camera,
   photos: Photo[],
   count: number,
   dateRange?: PhotoDateRange,
   animateOnFirstLoadOnly?: boolean,
-  tags: TagsWithMeta,
-  cameras: Cameras,
-  simulations: FilmSimulations,
 }) {
   return (
     <PhotoGridContainer {...{
       cacheKey: `camera-${createCameraKey(camera)}`,
       photos,
       count,
-      tags,
-      cameras,
-      simulations,
+      camera,
+      animateOnFirstLoadOnly,
       header: <CameraHeader {...{
         camera,
         photos,
         count,
         dateRange,
       }} />,
-      animateOnFirstLoadOnly,
     }} />
   );
 }

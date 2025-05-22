@@ -1,12 +1,13 @@
+'use client';
+
 import {
   Photo,
   descriptionForPhoto,
   titleForPhoto,
 } from '@/photo';
-import { absolutePathForPhotoImage, pathForPhoto } from '@/site/paths';
-import OGTile from '@/components/OGTile';
-
-export type OGLoadingState = 'unloaded' | 'loading' | 'loaded' | 'failed';
+import { PhotoSetCategory } from '../category';
+import { absolutePathForPhotoImage, pathForPhoto } from '@/app/paths';
+import OGTile, { OGLoadingState } from '@/components/OGTile';
 
 export default function PhotoOGTile({
   photo,
@@ -16,6 +17,7 @@ export default function PhotoOGTile({
   onFail,
   retryTime,
   onVisible,
+  ...categories
 }: {
   photo: Photo
   loadingState?: OGLoadingState
@@ -24,12 +26,12 @@ export default function PhotoOGTile({
   riseOnHover?: boolean
   retryTime?: number
   onVisible?: () => void
-}) {
+} & PhotoSetCategory) {
   return (
     <OGTile {...{
       title: titleForPhoto(photo),
       description: descriptionForPhoto(photo),
-      path: pathForPhoto({ photo }),
+      path: pathForPhoto({ photo, ...categories }),
       pathImageAbsolute: absolutePathForPhotoImage(photo),
       loadingState: loadingStateExternal,
       onLoad,
@@ -37,6 +39,6 @@ export default function PhotoOGTile({
       riseOnHover,
       retryTime,
       onVisible,
-    }}/>
+    }} />
   );
 };
