@@ -9,7 +9,7 @@ import { BiTrash } from 'react-icons/bi';
 export default function DeleteFormButton (
   props: ComponentProps<typeof SubmitButtonWithStatus> & {
     clearLocalState?: boolean
-  }
+  },
 ) {
   const {
     onFormSubmit: onFormSubmitProps,
@@ -35,11 +35,11 @@ export default function DeleteFormButton (
     spinnerColor="text"
     className={clsx(
       className,
-      '!text-red-500 dark:!text-red-600',
-      'active:!bg-red-100/50 active:dark:!bg-red-950/50',
-      'disabled:!bg-red-100/50 disabled:dark:!bg-red-950/50',
-      '!border-red-200 hover:!border-red-300',
-      'dark:!border-red-900/75 dark:hover:!border-red-900',
+      'text-red-500! dark:text-red-600!',
+      'active:bg-red-100/50! dark:active:bg-red-950/50!',
+      'disabled:bg-red-100/50! dark:disabled:bg-red-950/50!',
+      'border-red-200! hover:border-red-300!',
+      'dark:border-red-900/75! dark:hover:border-red-900!',
     )}
     onFormSubmit={onFormSubmit}
   />;

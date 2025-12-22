@@ -1,29 +1,35 @@
 'use client';
 
+import LinkWithIconLoader from '@/components/LinkWithIconLoader';
 import Note from '@/components/Note';
-import SiteGrid from '@/components/SiteGrid';
+import AppGrid from '@/components/AppGrid';
+import Spinner from '@/components/Spinner';
 import {
   PATH_ADMIN_CONFIGURATION,
+  PATH_ADMIN_INSIGHTS,
   checkPathPrefix,
-  isPathAdminConfiguration,
+  isPathAdminInfo,
   isPathTopLevelAdmin,
-} from '@/site/paths';
+} from '@/app/paths';
 import { useAppState } from '@/state/AppState';
 import { clsx } from 'clsx/lite';
 import { differenceInMinutes } from 'date-fns';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { BiCog } from 'react-icons/bi';
 import { FaRegClock } from 'react-icons/fa';
+import AdminAppInfoIcon from './AdminAppInfoIcon';
+import AdminInfoNav from './AdminInfoNav';
+import LinkWithLoaderBackground from '@/components/LinkWithLoaderBackground';
+import MaskedScroll from '@/components/MaskedScroll';
 
-// Updates considered recent if they occurred in past 5 minutes
+// Updates from past 5 minutes considered recent
 const areTimesRecent = (dates: Date[]) => dates
   .some(date => differenceInMinutes(new Date(), date) < 5);
 
 export default function AdminNavClient({
   items,
   mostRecentPhotoUpdateTime,
+  includeInsights = true,
 }: {
   items: {
     label: string,
@@ -31,6 +37,7 @@ export default function AdminNavClient({
     count: number,
   }[]
   mostRecentPhotoUpdateTime?: Date
+  includeInsights?: boolean
 }) {
   const pathname = usePathname();
 
@@ -56,50 +63,54 @@ export default function AdminNavClient({
   const shouldShowBanner = hasRecentUpdates && isPathTopLevelAdmin(pathname);
 
   return (
-    <SiteGrid
+    <AppGrid
       contentMain={
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className={clsx(
-            'flex gap-2 md:gap-4',
-            'border-b border-gray-200 dark:border-gray-800 pb-3',
+            'flex gap-2 pb-3',
+            'border-b border-gray-200 dark:border-gray-800',
           )}>
-            <div className={clsx(
-              'flex gap-2 md:gap-4',
-              'flex-grow overflow-x-auto',
-            )}>
+            <MaskedScroll
+              className="grow -mx-1 flex gap-0.5 md:gap-1.5"
+              direction="horizontal"
+            >
               {items.map(({ label, href, count }) =>
-                <Link
+                <LinkWithLoaderBackground
                   key={label}
                   href={href}
                   className={clsx(
                     'flex gap-0.5',
                     checkPathPrefix(pathname, href) ? 'font-bold' : 'text-dim',
+                    'hover:text-main active:text-medium',
                   )}
                   prefetch={false}
                 >
                   <span>{label}</span>
                   {count > 0 &&
                     <span>({count})</span>}
-                </Link>)}
-            </div>
-            <Link
-              href={PATH_ADMIN_CONFIGURATION}
-              className={isPathAdminConfiguration(pathname)
-                ? 'font-bold'
-                : 'text-dim'}
-            >
-              <BiCog
-                size={18}
-                className="inline-block"
-                aria-label="App Configuration"
-              />
-            </Link>
+                </LinkWithLoaderBackground>)}
+            </MaskedScroll>
+            <LinkWithIconLoader
+              href={includeInsights
+                ? PATH_ADMIN_INSIGHTS
+                : PATH_ADMIN_CONFIGURATION}
+              className={clsx(
+                isPathAdminInfo(pathname)
+                  ? 'font-bold'
+                  : 'text-dim',
+                'hover:text-main active:text-dim',
+              )}
+              icon={<AdminAppInfoIcon />}
+              loader={<Spinner className="translate-y-[-0.75px]" />}
+            />
           </div>
           {shouldShowBanner &&
-            <Note icon={<FaRegClock className="flex-shrink-0" />}>
+            <Note icon={<FaRegClock className="shrink-0" />}>
               Photo updates detected—they may take several minutes to show up
               for visitors
             </Note>}
+          {isPathAdminInfo(pathname) &&
+            <AdminInfoNav {...{ includeInsights }} />}
         </div>
       }
     />

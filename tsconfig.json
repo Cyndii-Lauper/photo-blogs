@@ -16,7 +16,6 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "noImplicitAny": false,
     "plugins": [
       {
         "name": "next"
@@ -32,7 +31,6 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "**/*.jsx",
     ".next/types/**/*.ts"
   ],
   "exclude": [

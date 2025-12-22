@@ -1,26 +1,32 @@
 'use client';
 
 import FieldSetWithStatus from '@/components/FieldSetWithStatus';
-import {
-  convertTagsForForm,
-  getValidationMessageForTags,
-  TagsWithMeta,
-} from '@/tag';
+import { useAppText } from '@/i18n/state/client';
+import { convertTagsForForm, getValidationMessageForTags, Tags } from '@/tag';
 import { ComponentProps, useEffect, useRef, useState } from 'react';
 
-export default function PhotoTagFieldset(
-  props: {
-    tags: string;
-    tagOptions?: TagsWithMeta;
-    onChange: (tags: string) => void;
-    onError?: (error: string) => void;
-    openOnLoad?: boolean;
-  } & Partial<Omit<ComponentProps<typeof FieldSetWithStatus>, 'tagOptions'>>
-) {
-  const { id, tags, tagOptions, onChange, onError, openOnLoad, ...rest } =
-    props;
+export default function PhotoTagFieldset(props: {
+  tags: string
+  tagOptions?: Tags
+  onChange: (tags: string) => void
+  onError?: (error: string) => void
+  openOnLoad?: boolean
+} & Partial<Omit<
+  ComponentProps<typeof FieldSetWithStatus>,
+  'tagOptions'
+>>) {
+  const {
+    tags,
+    tagOptions,
+    onChange,
+    onError,
+    openOnLoad,
+    ...rest
+  } = props;
 
   const ref = useRef<HTMLInputElement>(null);
+
+  const appText = useAppText();
 
   const [errorMessageLocal, setErrorMessageLocal] = useState('');
 
@@ -32,16 +38,16 @@ export default function PhotoTagFieldset(
       return () => clearTimeout(timeout);
     }
   }, [openOnLoad]);
-
+  
   return (
     <div ref={ref}>
       <FieldSetWithStatus
         {...rest}
         inputRef={ref}
-        id={id ?? 'tags'}
+        label="Tags"
         value={tags}
-        tagOptions={convertTagsForForm(tagOptions)}
-        onChange={(tags) => {
+        tagOptions={convertTagsForForm(tagOptions, appText)}
+        onChange={tags => {
           onChange(tags);
           const validationMessage = getValidationMessageForTags(tags) ?? '';
           onError?.(validationMessage);

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { FiArrowLeft } from 'react-icons/fi';
-import SiteGrid from './SiteGrid';
+import AppGrid from './AppGrid';
 import { clsx } from 'clsx/lite';
 import Badge from './Badge';
 import Spinner from './Spinner';
@@ -24,7 +24,7 @@ function AdminChildPage({
   children: ReactNode,
 }) {
   return (
-    <SiteGrid
+    <AppGrid
       contentMain={
         <div className="space-y-6">
           {(backPath || breadcrumb || accessory) &&
@@ -35,7 +35,7 @@ function AdminChildPage({
             )}>
               <div className={clsx(
                 'flex items-center gap-x-1.5 sm:gap-x-3 gap-y-1',
-                'flex-grow',
+                'grow',
                 breadcrumbEllipsis ? 'min-w-0' : 'flex-wrap',
               )}>
                 {backPath &&
@@ -54,7 +54,7 @@ function AdminChildPage({
                     <Badge
                       dimContent={isLoading}
                       className={clsx(
-                        breadcrumbEllipsis && 'text-ellipsis truncate',
+                        breadcrumbEllipsis && 'truncate',
                       )}
                     >
                       {breadcrumb}

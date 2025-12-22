@@ -20,7 +20,7 @@ export const getDimensionsFromSize = (
   } else if (aspectRatio < 1) {
     width = size * aspectRatio;
   }
-  
+
   return {
     width: Math.round(width),
     height: Math.round(height),

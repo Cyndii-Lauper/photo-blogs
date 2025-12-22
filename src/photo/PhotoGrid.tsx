@@ -1,20 +1,19 @@
 'use client';
 
-import { Photo, PhotoSetAttributes } from '.';
+import { Photo } from '.';
+import { PhotoSetCategory } from '../category';
 import PhotoMedium from './PhotoMedium';
 import { clsx } from 'clsx/lite';
 import AnimateItems from '@/components/AnimateItems';
-import { GRID_ASPECT_RATIO } from '@/site/config';
+import { GRID_ASPECT_RATIO } from '@/app/config';
 import { useAppState } from '@/state/AppState';
 import SelectTileOverlay from '@/components/SelectTileOverlay';
+import { ReactNode } from 'react';
+import { GRID_GAP_CLASSNAME } from '@/components';
 
 export default function PhotoGrid({
   photos,
   selectedPhoto,
-  tag,
-  camera,
-  simulation,
-  focal,
   photoPriority,
   fast,
   animate = true,
@@ -26,31 +25,34 @@ export default function PhotoGrid({
   canSelect,
   onLastPhotoVisible,
   onAnimationComplete,
+  ...categories
 }: {
   photos: Photo[]
   selectedPhoto?: Photo
-  canSelect?: boolean
   photoPriority?: boolean
   fast?: boolean
   animate?: boolean
   canStart?: boolean
   animateOnFirstLoadOnly?: boolean
   staggerOnFirstLoadOnly?: boolean
-  additionalTile?: JSX.Element
+  additionalTile?: ReactNode
   small?: boolean
+  canSelect?: boolean
   onLastPhotoVisible?: () => void
   onAnimationComplete?: () => void
-}& PhotoSetAttributes) {
+} & PhotoSetCategory) {
   const {
     isUserSignedIn,
     selectedPhotoIds,
     setSelectedPhotoIds,
     isGridHighDensity,
   } = useAppState();
+
   return (
     <AnimateItems
       className={clsx(
-        'grid gap-0.5 sm:gap-1',
+        'grid',
+        GRID_GAP_CLASSNAME,
         small
           ? 'grid-cols-3 xs:grid-cols-6'
           : isGridHighDensity
@@ -71,7 +73,7 @@ export default function PhotoGrid({
         return <div
           key={photo.id}
           className={clsx(
-            GRID_ASPECT_RATIO !== 0 && 'flex relative overflow-hidden',
+            'flex relative overflow-hidden',
             'group',
           )}
           style={{
@@ -83,15 +85,12 @@ export default function PhotoGrid({
           <PhotoMedium
             className={clsx(
               'flex w-full h-full',
-              //* Prevent photo navigation when selecting
+              // Prevent photo navigation when selecting
               selectedPhotoIds?.length !== undefined && 'pointer-events-none',
             )}
             {...{
               photo,
-              tag,
-              camera,
-              simulation,
-              focal,
+              ...categories,
               selected: photo.id === selectedPhoto?.id,
               priority: photoPriority,
               onVisible: index === photos.length - 1
@@ -108,7 +107,7 @@ export default function PhotoGrid({
               )}
             />}
         </div>;
-      }).concat(additionalTile ?? [])}
+      }).concat(additionalTile ? <>{additionalTile}</> : [])}
       itemKeys={photos.map(photo => photo.id)
         .concat(additionalTile ? ['more'] : [])}
     />

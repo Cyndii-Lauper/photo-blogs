@@ -47,7 +47,6 @@ export default function SubmitButtonWithStatus({
       type="submit"
       disabled={disabled}
       className={clsx(
-        className,
         'inline-flex items-center gap-2',
         className,
       )}
@@ -55,7 +54,6 @@ export default function SubmitButtonWithStatus({
       spinnerColor={spinnerColor}
       styleAs={styleAs}
       isLoading={pending}
-      {...buttonProps}
     >
       {children}
     </LoaderButton>

@@ -1,8 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import {
+  ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  FIELDS_WITH_JSON,
   FORM_METADATA_ENTRIES,
+  FormFields,
+  FormMeta,
   PhotoFormData,
   convertFormKeysToLabels,
   formHasTextContent,
@@ -15,21 +24,29 @@ import { createPhotoAction, updatePhotoAction } from '../actions';
 import SubmitButtonWithStatus from '@/components/SubmitButtonWithStatus';
 import Link from 'next/link';
 import { clsx } from 'clsx/lite';
-import { PATH_ADMIN_PHOTOS, PATH_ADMIN_UPLOADS } from '@/site/paths';
+import { PATH_ADMIN_PHOTOS, PATH_ADMIN_UPLOADS } from '@/app/paths';
 import { toastSuccess, toastWarning } from '@/toast';
 import { getDimensionsFromSize } from '@/utility/size';
 import ImageWithFallback from '@/components/image/ImageWithFallback';
-import { TagsWithMeta, convertTagsForForm } from '@/tag';
+import { Tags, convertTagsForForm } from '@/tag';
 import { AiContent } from '../ai/useAiImageQueries';
 import AiButton from '../ai/AiButton';
 import Spinner from '@/components/Spinner';
 import usePreventNavigation from '@/utility/usePreventNavigation';
 import { useAppState } from '@/state/AppState';
 import UpdateBlurDataButton from '../UpdateBlurDataButton';
-import { getNextImageUrlForManipulation } from '@/services/next-image';
-import { BLUR_ENABLED } from '@/site/config';
-import { PhotoDbInsert } from '..';
+import { getNextImageUrlForManipulation } from '@/platforms/next-image';
+import { BLUR_ENABLED, IS_PREVIEW } from '@/app/config';
 import ErrorNote from '@/components/ErrorNote';
+import { convertRecipesForForm, Recipes } from '@/recipe';
+import deepEqual from 'fast-deep-equal/es6/react';
+import ApplyRecipeTitleGloballyCheckbox from './ApplyRecipesGloballyCheckbox';
+import { convertFilmsForForm, Films } from '@/film';
+import { isMakeFujifilm } from '@/platforms/fujifilm';
+import PhotoFilmIcon from '@/film/PhotoFilmIcon';
+import FieldsetFavs from './FieldsetFavs';
+import FieldsetHidden from './FieldsetHidden';
+import { useAppText } from '@/i18n/state/client';
 
 const THUMBNAIL_SIZE = 300;
 
@@ -39,6 +56,8 @@ export default function PhotoForm({
   updatedExifData,
   updatedBlurData,
   uniqueTags,
+  uniqueRecipes,
+  uniqueFilms,
   aiContent,
   shouldStripGpsData,
   onTitleChange,
@@ -49,7 +68,9 @@ export default function PhotoForm({
   initialPhotoForm: Partial<PhotoFormData>
   updatedExifData?: Partial<PhotoFormData>
   updatedBlurData?: string
-  uniqueTags?: TagsWithMeta
+  uniqueTags?: Tags
+  uniqueRecipes?: Recipes
+  uniqueFilms?: Films
   aiContent?: AiContent
   shouldStripGpsData?: boolean
   onTitleChange?: (updatedTitle: string) => void
@@ -63,6 +84,8 @@ export default function PhotoForm({
   const [formActionErrorMessage, setFormActionErrorMessage] = useState('');
 
   const { invalidateSwr, shouldDebugImageFallbacks } = useAppState();
+
+  const appText = useAppText();
 
   const changedFormKeys = useMemo(() =>
     getChangedFormFields(initialPhotoForm, formData),
@@ -86,9 +109,16 @@ export default function PhotoForm({
       const changedKeys: (keyof PhotoFormData)[] = [];
 
       setFormData(currentForm => {
-        Object.entries(updatedExifData ?? {})
+        (Object.entries(updatedExifData ?? {}) as
+          [keyof PhotoFormData, string][])
           .forEach(([key, value]) => {
-            if (currentForm[key as keyof PhotoFormData] !== value) {
+            let a = currentForm[key];
+            let b = value;
+            if (FIELDS_WITH_JSON.includes(key)) {
+              a = a ? JSON.parse(a) : undefined;
+              b = b ? JSON.parse(b) : undefined;
+            }
+            if (!deepEqual(a, b)) {
               changedKeys.push(key as keyof PhotoFormData);
             }
           });
@@ -101,10 +131,7 @@ export default function PhotoForm({
 
       if (changedKeys.length > 0) {
         const fields = convertFormKeysToLabels(changedKeys);
-        toastSuccess(
-          `Updated EXIF fields: ${fields.join(', ')}`,
-          8000,
-        );
+        toastSuccess(`Updated EXIF fields: ${fields.join(', ')}`, 8000);
       } else {
         toastWarning('No new EXIF data found');
       }
@@ -204,7 +231,7 @@ export default function PhotoForm({
       case 'blurData':
         return shouldDebugImageFallbacks && type === 'edit' && formData.url
           ? <UpdateBlurDataButton
-            photoUrl={getNextImageUrlForManipulation(formData.url)}
+            photoUrl={getNextImageUrlForManipulation(formData.url, IS_PREVIEW)}
             onUpdatedBlurData={blurData =>
               setFormData(data => ({ ...data, blurData }))}
           />
@@ -214,9 +241,9 @@ export default function PhotoForm({
   };
 
   const shouldHideField = (
-    key: keyof PhotoDbInsert | 'favorite',
+    key: FormFields,
     hideIfEmpty?: boolean,
-    shouldHide?: (formData: Partial<PhotoFormData>) => boolean,
+    shouldHide?: FormMeta['shouldHide'],
   ) => {
     if (
       key === 'blurData' &&
@@ -228,11 +255,20 @@ export default function PhotoForm({
     } else {
       return (
         (hideIfEmpty && !formData[key]) ||
-        shouldHide?.(formData)
+        shouldHide?.(formData, changedFormKeys)
       );
     }
   };
-    
+
+  const onMatchResults = useCallback((didFindMatchingPhotos: boolean) => {
+    setFormData(data => ({
+      ...data,
+      applyRecipeTitleGlobally: didFindMatchingPhotos
+        ? 'true'
+        : 'false',
+    }));
+  }, []);
+
   return (
     <div className="space-y-8 max-w-[38rem] relative">
       <div className="flex gap-2">
@@ -282,7 +318,11 @@ export default function PhotoForm({
           ? createPhotoAction
           : updatePhotoAction
         )(data)
-          .catch(e => setFormActionErrorMessage(e.message))}
+          .catch(e => {
+            if (e.message !== 'NEXT_REDIRECT') {
+              setFormActionErrorMessage(e.message);
+            }
+          })}
         onSubmit={() => {
           setFormActionErrorMessage('');
           (document.activeElement as HTMLElement)?.blur?.();
@@ -291,43 +331,58 @@ export default function PhotoForm({
         {/* Fields */}
         <div className="space-y-6">
           {FORM_METADATA_ENTRIES(
-            convertTagsForForm(uniqueTags),
+            convertTagsForForm(uniqueTags, appText),
+            convertRecipesForForm(uniqueRecipes),
+            convertFilmsForForm(uniqueFilms, isMakeFujifilm(formData.make)),
             aiContent !== undefined,
+            shouldStripGpsData,
           )
             .map(([key, {
               label,
               note,
+              noteShort,
               required,
               selectOptions,
               selectOptionsDefaultLabel,
               tagOptions,
+              tagOptionsLimit,
+              tagOptionsLimitValidationMessage,
               readOnly,
+              hideModificationStatus,
               validate,
               validateStringMaxLength,
+              spellCheck,
               capitalize,
               hideIfEmpty,
               shouldHide,
               loadingMessage,
               type,
-            }]) =>
-              !shouldHideField(key, hideIfEmpty, shouldHide) &&
-                <FieldSetWithStatus
-                  key={key}
-                  id={key}
-                  label={label + (
+              staticValue,
+            }]) => {
+              if (!shouldHideField(key, hideIfEmpty, shouldHide)) {
+                const fieldProps: ComponentProps<typeof FieldSetWithStatus> = {
+                  id: key,
+                  label: label + (
                     key === 'blurData' && shouldDebugImageFallbacks
                       ? ` (${(formData[key] ?? '').length} chars.)`
                       : ''
-                  )}
-                  note={note}
-                  error={formErrors[key]}
-                  value={formData[key] ?? ''}
-                  isModified={changedFormKeys.includes(key)}
-                  onChange={value => {
+                  ),
+                  note,
+                  noteShort,
+                  error: formErrors[key],
+                  value: staticValue ?? formData[key] ?? '',
+                  isModified: (
+                    !hideModificationStatus &&
+                    changedFormKeys.includes(key)
+                  ),
+                  onChange: value => {
                     const formUpdated = { ...formData, [key]: value };
                     setFormData(formUpdated);
                     if (validate) {
-                      setFormErrors({ ...formErrors, [key]: validate(value) });
+                      setFormErrors({
+                        ...formErrors, [key]:
+                        validate(value),
+                      });
                     } else if (validateStringMaxLength !== undefined) {
                       setFormErrors({
                         ...formErrors,
@@ -339,28 +394,68 @@ export default function PhotoForm({
                     if (key === 'title') {
                       onTitleChange?.(value.trim());
                     }
-                  }}
-                  selectOptions={selectOptions}
-                  selectOptionsDefaultLabel={selectOptionsDefaultLabel}
-                  tagOptions={tagOptions}
-                  required={required}
-                  readOnly={readOnly}
-                  capitalize={capitalize}
-                  placeholder={loadingMessage && !formData[key]
+                  },
+                  selectOptions,
+                  selectOptionsDefaultLabel: selectOptionsDefaultLabel,
+                  tagOptions,
+                  tagOptionsLimit,
+                  tagOptionsLimitValidationMessage,
+                  required,
+                  readOnly,
+                  spellCheck,
+                  capitalize,
+                  placeholder: loadingMessage && !formData[key]
                     ? loadingMessage
-                    : undefined}
-                  loading={
+                    : undefined,
+                  loading: (
                     (loadingMessage && !formData[key] ? true : false) ||
-                    isFieldGeneratingAi(key)}
-                  type={type}
-                  accessory={accessoryForField(key)}
-                />)}
-          <input
-            type="hidden"
-            name="shouldStripGpsData"
-            value={shouldStripGpsData ? 'true' : 'false'}
-            readOnly
-          />
+                    isFieldGeneratingAi(key)
+                  ),
+                  type,
+                  accessory: accessoryForField(key),
+                };
+
+                switch (key) {
+                case 'film':
+                  return <FieldSetWithStatus
+                    key={key}
+                    tagOptionsDefaultIcon={<span
+                      className="w-4 overflow-hidden"
+                    >
+                      <PhotoFilmIcon />
+                    </span>}
+                    {...fieldProps}
+                  />;
+                case 'applyRecipeTitleGlobally':
+                  return <ApplyRecipeTitleGloballyCheckbox
+                    key={key}
+                    photoId={initialPhotoForm.id}
+                    recipeTitle={formData.recipeTitle}
+                    hasRecipeTitleChanged={
+                      changedFormKeys.includes('recipeTitle')}
+                    recipeData={formData.recipeData}
+                    film={formData.film}
+                    onMatchResults={onMatchResults}
+                    {...fieldProps}
+                  />;
+                case 'favorite':
+                  return <FieldsetFavs
+                    key={key}
+                    {...fieldProps}
+                  />;
+                case 'hidden':
+                  return <FieldsetHidden
+                    key={key}
+                    {...fieldProps}
+                  />;
+                default:
+                  return <FieldSetWithStatus
+                    key={key}
+                    {...fieldProps}
+                  />;
+                }
+              }
+            })}
         </div>
         {/* Actions */}
         <div className={clsx(
@@ -384,7 +479,7 @@ export default function PhotoForm({
           <div className={clsx(
             'absolute -top-16 -left-2 right-0 bottom-0 -z-10',
             'pointer-events-none',
-            'bg-gradient-to-t',
+            'bg-linear-to-t',
             'from-white/90 from-60%',
             'dark:from-black/90 dark:from-50%',
           )} />

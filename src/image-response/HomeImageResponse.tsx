@@ -1,9 +1,9 @@
-import { SITE_DOMAIN_OR_TITLE } from '@/site/config';
+import { NAV_TITLE_OR_DOMAIN } from '@/app/config';
 import { Photo } from '../photo';
 import ImageCaption from './components/ImageCaption';
 import ImageContainer from './components/ImageContainer';
 import ImagePhotoGrid from './components/ImagePhotoGrid';
-import { NextImageSize } from '@/services/next-image';
+import { NextImageSize } from '@/platforms/next-image';
 
 export default function HomeImageResponse({
   photos,
@@ -17,7 +17,7 @@ export default function HomeImageResponse({
   fontFamily: string
 }) {
   return (
-    <ImageContainer {...{ width, height }} >
+    <ImageContainer>
       <ImagePhotoGrid
         {...{
           photos,
@@ -25,9 +25,12 @@ export default function HomeImageResponse({
           height,
         }}
       />
-      <ImageCaption {...{ width, height, fontFamily }}>
-        {SITE_DOMAIN_OR_TITLE}
-      </ImageCaption>
+      <ImageCaption {...{
+        width,
+        height,
+        fontFamily,
+        title: NAV_TITLE_OR_DOMAIN,
+      }} />
     </ImageContainer>
   );
 }

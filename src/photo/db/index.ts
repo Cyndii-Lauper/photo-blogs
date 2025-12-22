@@ -1,28 +1,45 @@
-import { PRIORITY_ORDER_ENABLED } from '@/site/config';
+import { PRIORITY_ORDER_ENABLED } from '@/app/config';
 import { parameterize } from '@/utility/string';
-import { PhotoSetAttributes } from '..';
+import { PhotoSetCategory } from '../../category';
+import { Camera } from '@/camera';
+import { Lens } from '@/lens';
 
 export const GENERATE_STATIC_PARAMS_LIMIT = 1000;
 export const PHOTO_DEFAULT_LIMIT = 100;
+
+const DB_PARAMETERIZE_REPLACEMENTS = [
+  [',', ''],
+  ['/', ''],
+  ['+', '-'],
+  [' ', '-'],
+];
+
+const parameterizeForDb = (field: string) =>
+  DB_PARAMETERIZE_REPLACEMENTS.reduce((acc, [from, to]) =>
+    `REPLACE(${acc}, '${from}', '${to}')`
+  , `LOWER(TRIM(${field}))`);
 
 export type GetPhotosOptions = {
   sortBy?: 'createdAt' | 'createdAtAsc' | 'takenAt' | 'priority'
   limit?: number
   offset?: number
   query?: string
-  focal?: number
+  maximumAspectRatio?: number
   takenBefore?: Date
   takenAfterInclusive?: Date
   updatedBefore?: Date
   hidden?: 'exclude' | 'include' | 'only'
-}& PhotoSetAttributes;
+} & Omit<PhotoSetCategory, 'camera' | 'lens'> & {
+  camera?: Partial<Camera>
+  lens?: Partial<Lens>
+};
 
 export const areOptionsSensitive = (options: GetPhotosOptions) =>
   options.hidden === 'include' || options.hidden === 'only';
 
 export const getWheresFromOptions = (
   options: GetPhotosOptions,
-  initialValuesIndex = 1
+  initialValuesIndex = 1,
 ) => {
   const {
     hidden = 'exclude',
@@ -30,10 +47,12 @@ export const getWheresFromOptions = (
     takenAfterInclusive,
     updatedBefore,
     query,
+    maximumAspectRatio,
     tag,
     camera,
     lens,
-    simulation,
+    film,
+    recipe,
     focal,
   } = options;
 
@@ -67,25 +86,39 @@ export const getWheresFromOptions = (
     wheres.push(`CONCAT(title, ' ', caption, ' ', semantic_description) ILIKE $${valuesIndex++}`);
     wheresValues.push(`%${query.toLocaleLowerCase()}%`);
   }
+  if (maximumAspectRatio) {
+    wheres.push(`aspect_ratio <= $${valuesIndex++}`);
+    wheresValues.push(maximumAspectRatio);
+  }
+  if (camera?.make) {
+    wheres.push(`${parameterizeForDb('make')}=$${valuesIndex++}`);
+    wheresValues.push(parameterize(camera.make));
+  }
+  if (camera?.model) {
+    wheres.push(`${parameterizeForDb('model')}=$${valuesIndex++}`);
+    wheresValues.push(parameterize(camera.model));
+  }
+  if (lens?.make) {
+    wheres.push(`${parameterizeForDb('lens_make')}=$${valuesIndex++}`);
+    wheresValues.push(parameterize(lens.make));
+  }
+  if (lens?.model) {
+    wheres.push(`${parameterizeForDb('lens_model')}=$${valuesIndex++}`);
+    // Ensure unique queries for lenses missing makes
+    if (!lens.make) { wheres.push('lens_make IS NULL'); }
+    wheresValues.push(parameterize(lens.model));
+  }
   if (tag) {
     wheres.push(`$${valuesIndex++}=ANY(tags)`);
     wheresValues.push(tag);
   }
-  if (camera) {
-    wheres.push(`LOWER(REPLACE(make, ' ', '-'))=$${valuesIndex++}`);
-    wheres.push(`LOWER(REPLACE(model, ' ', '-'))=$${valuesIndex++}`);
-    wheresValues.push(parameterize(camera.make, true));
-    wheresValues.push(parameterize(camera.model, true));
+  if (film) {
+    wheres.push(`film=$${valuesIndex++}`);
+    wheresValues.push(film);
   }
-  if (lens) {
-    wheres.push(`LOWER(REPLACE(lens_make, ' ', '-'))=$${valuesIndex++}`);
-    wheres.push(`LOWER(REPLACE(lens_model, ' ', '-'))=$${valuesIndex++}`);
-    wheresValues.push(parameterize(lens.make, true));
-    wheresValues.push(parameterize(lens.model, true));
-  }
-  if (simulation) {
-    wheres.push(`film_simulation=$${valuesIndex++}`);
-    wheresValues.push(simulation);
+  if (recipe) {
+    wheres.push(`recipe_title=$${valuesIndex++}`);
+    wheresValues.push(recipe);
   }
   if (focal) {
     wheres.push(`focal_length=$${valuesIndex++}`);

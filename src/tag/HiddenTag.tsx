@@ -1,9 +1,9 @@
 import { TAG_HIDDEN } from '.';
-import { pathForTag } from '@/site/paths';
+import { pathForTag } from '@/app/paths';
+import IconHidden from '@/components/icons/IconHidden';
 import EntityLink, {
   EntityLinkExternalProps,
 } from '@/components/primitives/EntityLink';
-import { AiOutlineEyeInvisible } from 'react-icons/ai';
 
 export default function HiddenTag({
   type,
@@ -11,23 +11,25 @@ export default function HiddenTag({
   contrast,
   prefetch,
   countOnHover,
+  className,
 }: {
   countOnHover?: number
 } & EntityLinkExternalProps) {
   return (
     <EntityLink
       label={badged
-        ? <span className="inline-flex gap-1">
+        ? <span className="inline-flex items-center gap-1">
           {TAG_HIDDEN}
-          <AiOutlineEyeInvisible
+          <IconHidden
             size={13}
-            className="translate-y-[-1.5px]"
+            className="translate-y-[-0.5px]"
           />
         </span>
         : TAG_HIDDEN}
       href={pathForTag(TAG_HIDDEN)}
-      icon={!badged && <AiOutlineEyeInvisible size={16} />}
+      icon={!badged && <IconHidden size={16} />}
       type={type}
+      className={className}
       hoverEntity={countOnHover}
       badged={badged}
       contrast={contrast}

@@ -2,9 +2,15 @@ import { Photo } from '../photo';
 import ImageCaption from './components/ImageCaption';
 import ImagePhotoGrid from './components/ImagePhotoGrid';
 import ImageContainer from './components/ImageContainer';
-import { Camera, cameraFromPhoto, formatCameraText } from '@/camera';
-import { IoMdCamera } from 'react-icons/io';
-import { NextImageSize } from '@/services/next-image';
+import {
+  Camera,
+  cameraFromPhoto,
+  formatCameraText,
+} from '@/camera';
+import { NextImageSize } from '@/platforms/next-image';
+import { AiFillApple } from 'react-icons/ai';
+import IconCamera from '@/components/icons/IconCamera';
+import { isCameraApple } from '@/platforms/apple';
 
 export default function CameraImageResponse({
   camera: cameraProp,
@@ -21,11 +27,7 @@ export default function CameraImageResponse({
 }) {
   const camera = cameraFromPhoto(photos[0], cameraProp);
   return (
-    <ImageContainer {...{
-      width,
-      height,
-      ...photos.length === 0 && { background: 'black' },
-    }}>
+    <ImageContainer solidBackground={photos.length === 0}>
       <ImagePhotoGrid
         {...{
           photos,
@@ -37,16 +39,23 @@ export default function CameraImageResponse({
         width,
         height,
         fontFamily,
-        icon: <IoMdCamera
-          size={height * .079}
-          style={{
-            transform: `translateY(${height * .003}px)`,
-            marginRight: height * .015,
-          }}
-        />,
-      }}>
-        {formatCameraText(camera).toLocaleUpperCase()}
-      </ImageCaption>
+        icon: isCameraApple(camera)
+          ? <AiFillApple
+            size={height * .09}
+            style={{
+              marginRight: height * .005,
+              transform: `translateY(${-height * .002}px)`,
+            }}
+          />
+          : <IconCamera
+            size={height * .09}
+            style={{
+              marginRight: height * .015,
+              transform: `translateY(${height * .001}px)`,
+            }}
+          />,
+        title: formatCameraText(camera).toLocaleUpperCase(),
+      }} />
     </ImageContainer>
   );
 }

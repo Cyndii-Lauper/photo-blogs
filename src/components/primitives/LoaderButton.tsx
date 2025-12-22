@@ -2,38 +2,55 @@
 
 import Spinner, { SpinnerColor } from '@/components/Spinner';
 import { clsx } from 'clsx/lite';
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+import {
+  ButtonHTMLAttributes,
+  ComponentProps,
+  ReactNode,
+  RefObject,
+} from 'react';
+import Tooltip from '../Tooltip';
 
-export default function LoaderButton(props: {
+export default function LoaderButton({
+  ref,
+  children,
+  classNameIcon,
+  isLoading,
+  icon,
+  spinnerColor,
+  spinnerClassName,
+  styleAs = 'button',
+  hideTextOnMobile = true,
+  confirmText,
+  shouldPreventDefault,
+  primary,
+  hideFocusOutline,
+  type = 'button',
+  onClick,
+  disabled,
+  className,
+  tooltip,
+  tooltipColor,
+  ...rest
+}: {
+  ref?: RefObject<HTMLButtonElement | null>
+  classNameIcon?: string
   isLoading?: boolean
   icon?: ReactNode
   spinnerColor?: SpinnerColor
+  spinnerClassName?: string
   styleAs?: 'button' | 'link' | 'link-without-hover'
   hideTextOnMobile?: boolean
-  shouldPreventDefault?: boolean
   confirmText?: string
+  shouldPreventDefault?: boolean
   primary?: boolean
+  hideFocusOutline?: boolean
+  tooltip?: string
+  tooltipColor?: ComponentProps<typeof Tooltip>['color']
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
-  const {
-    children,
-    isLoading,
-    icon,
-    spinnerColor,
-    styleAs = 'button',
-    hideTextOnMobile = true,
-    shouldPreventDefault,
-    confirmText,
-    primary,
-    type = 'button',
-    onClick,
-    disabled,
-    className,
-    ...rest
-  } = props;
-
-  return (
+  const button =
     <button
       {...rest}
+      ref={ref}
       type={type}
       onClick={e => {
         if (shouldPreventDefault) { e.preventDefault(); }
@@ -42,31 +59,38 @@ export default function LoaderButton(props: {
         }
       }}
       className={clsx(
+        'font-mono',
         ...(styleAs !== 'button'
           ? [
             'link h-4 active:text-medium',
-            'disabled:!bg-transparent',
+            'disabled:bg-transparent!',
           ]
-          : ['h-9']),
+          : ['h-9']
+        ),
         styleAs === 'link' && 'hover:text-dim',
         styleAs === 'link-without-hover' && 'hover:text-main',
         'inline-flex items-center gap-2 self-start whitespace-nowrap',
         primary && 'primary',
+        hideFocusOutline && 'focus:outline-hidden',
         className,
       )}
       disabled={isLoading || disabled}
     >
       {(icon || isLoading) &&
         <span className={clsx(
-          'min-w-[1.25rem] max-h-5 overflow-hidden',
+          'min-w-[1.25rem] max-h-5',
           styleAs === 'button' ? 'translate-y-[-0.5px]' : 'translate-y-[0.5px]',
           'inline-flex justify-center shrink-0',
+          classNameIcon,
         )}>
           {isLoading
             ? <Spinner
               size={14}
               color={spinnerColor}
-              className="translate-y-[0.5px]"
+              className={clsx(
+                'translate-y-[1px]',
+                spinnerClassName,
+              )}
             />
             : icon}
         </span>}
@@ -76,6 +100,13 @@ export default function LoaderButton(props: {
       )}>
         {children}
       </span>}
-    </button>
+    </button>;
+
+  return (
+    tooltip
+      ? <Tooltip content={tooltip} color={tooltipColor}>
+        {button}
+      </Tooltip>
+      : button
   );
 }

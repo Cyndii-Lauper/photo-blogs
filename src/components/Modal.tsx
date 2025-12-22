@@ -1,28 +1,33 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx/lite';
 import useClickInsideOutside from '@/utility/useClickInsideOutside';
 import { useRouter } from 'next/navigation';
 import AnimateItems from './AnimateItems';
-import { PATH_ROOT } from '@/site/paths';
+import { PATH_ROOT } from '@/app/paths';
 import usePrefersReducedMotion from '@/utility/usePrefersReducedMotion';
-import useMetaThemeColor from '@/site/useMetaThemeColor';
+import useEscapeHandler from '@/utility/useEscapeHandler';
+import { useTheme } from 'next-themes';
 
 export default function Modal({
   onClosePath,
   onClose,
   className,
   anchor = 'center',
+  container = true,
   children,
+  noPadding,
   fast,
 }: {
   onClosePath?: string
   onClose?: () => void
   className?: string
   anchor?: 'top' | 'center'
+  container?: boolean
   children: ReactNode
+  noPadding?: boolean
   fast?: boolean
 }) {
   const router = useRouter();
@@ -31,15 +36,16 @@ export default function Modal({
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const [htmlElements, setHtmlElements] = useState<HTMLDivElement[]>([]);
+  const [htmlElements, setHtmlElements] =
+    useState<RefObject<HTMLDivElement | null>[]>([]);
 
   useEffect(() => {
     if (contentRef.current) {
-      setHtmlElements([contentRef.current]);
+      setHtmlElements([contentRef]);
     }
   }, []);
 
-  useMetaThemeColor({ colorLight: '#333' });
+  const { resolvedTheme } = useTheme();
 
   useClickInsideOutside({
     htmlElements,
@@ -55,6 +61,11 @@ export default function Modal({
     },
   });
 
+  useEscapeHandler({
+    onKeyDown: onClose,
+    ignoreShouldRespondToKeyboardCommands: true,
+  });
+
   return (
     <motion.div
       className={clsx(
@@ -62,12 +73,16 @@ export default function Modal({
         anchor === 'top'
           ? 'items-start pt-4 sm:pt-24'
           : 'items-center',
-        'bg-black',
+        'bg-white dark:bg-black',
       )}
       initial={!prefersReducedMotion
-        ? { backgroundColor: 'rgba(0, 0, 0, 0)' }
+        ? { backgroundColor: resolvedTheme === 'dark'
+          ? 'rgba(0, 0, 0, 0)'
+          : 'rgba(255, 255, 255, 0)' }
         : false}
-      animate={{ backgroundColor: 'rgba(0, 0, 0, 0.80)' }}
+      animate={{ backgroundColor: resolvedTheme === 'dark'
+        ? 'rgba(0, 0, 0, 0.80)'
+        : 'rgba(255, 255, 255, 0.80)' }}
       transition={{ duration: 0.3, easing: 'easeOut' }}
     >
       <AnimateItems
@@ -76,11 +91,11 @@ export default function Modal({
           ref={contentRef}
           key="modalContent"
           className={clsx(
-            'w-[calc(100vw-1.5rem)] sm:w-[min(540px,90vw)]',
-            'p-3 rounded-lg',
-            'md:p-4 md:rounded-xl',
-            'bg-white dark:bg-black',
-            'dark:border dark:border-gray-800',
+            container && 'w-[calc(100vw-1.5rem)] sm:w-[min(540px,90vw)]',
+            container && !noPadding && 'p-3 md:p-4',
+            container && 'rounded-lg md:rounded-xl border-medium',
+            container && 'bg-white dark:bg-black',
+            container && 'shadow-2xl/20 dark:shadow-2xl/100',
             className,
           )}
         >

@@ -1,6 +1,6 @@
 'use client';
 
-import { INFINITE_SCROLL_GRID_PHOTO_MULTIPLE } from '.';
+import { INFINITE_SCROLL_GRID_MULTIPLE } from '.';
 import InfinitePhotoScroll from './InfinitePhotoScroll';
 import PhotoGrid from './PhotoGrid';
 import { ComponentProps } from 'react';
@@ -9,12 +9,9 @@ export default function PhotoGridInfinite({
   cacheKey,
   initialOffset,
   canStart,
-  tag,
-  camera,
-  simulation,
-  focal,
   animateOnFirstLoadOnly,
   canSelect,
+  ...categories
 }: {
   cacheKey: string
   initialOffset: number
@@ -23,19 +20,14 @@ export default function PhotoGridInfinite({
     <InfinitePhotoScroll
       cacheKey={cacheKey}
       initialOffset={initialOffset}
-      itemsPerPage={INFINITE_SCROLL_GRID_PHOTO_MULTIPLE}
-      tag={tag}
-      camera={camera}
-      simulation={simulation}
+      itemsPerPage={INFINITE_SCROLL_GRID_MULTIPLE}
+      {...categories}
     >
       {({ photos, onLastPhotoVisible }) =>
         <PhotoGrid {...{
           photos,
+          ...categories,
           canStart,
-          tag,
-          camera,
-          simulation,
-          focal,
           onLastPhotoVisible,
           animateOnFirstLoadOnly,
           canSelect,

@@ -5,7 +5,7 @@ import {
   getExtensionFromStorageUrl,
   moveFile,
   putFile,
-} from '@/services/storage';
+} from '@/platforms/storage';
 import { removeGpsData } from './server';
 
 export const convertUploadToPhoto = async ({
@@ -25,7 +25,7 @@ export const convertUploadToPhoto = async ({
   if (shouldStripGpsData) {
     const fileWithoutGps = await removeGpsData(
       fileBytes ?? await fetch(urlOrigin, { cache: 'no-store' })
-        .then(res => res.arrayBuffer())
+        .then(res => res.arrayBuffer()),
     );
     return putFile(fileWithoutGps, photoPath).then(async url => {
       if (url && shouldDeleteOrigin) { await deleteFile(urlOrigin); }

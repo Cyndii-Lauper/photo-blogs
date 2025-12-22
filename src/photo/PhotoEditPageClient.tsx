@@ -2,29 +2,34 @@
 
 import AdminChildPage from '@/components/AdminChildPage';
 import { Photo } from '.';
-import { PATH_ADMIN_PHOTOS } from '@/site/paths';
+import { PATH_ADMIN_PHOTOS } from '@/app/paths';
 import { PhotoFormData, convertPhotoToFormData } from './form';
 import PhotoForm from './form/PhotoForm';
-import ExifSyncButton from '@/admin/ExifSyncButton';
-import { TagsWithMeta } from '@/tag';
+import { Tags } from '@/tag';
 import AiButton from './ai/AiButton';
 import usePhotoFormParent from './form/usePhotoFormParent';
+import ExifCaptureButton from '@/admin/ExifCaptureButton';
 import { useState } from 'react';
+import { Recipes } from '@/recipe';
+import { Films } from '@/film';
 
 export default function PhotoEditPageClient({
   photo,
   uniqueTags,
+  uniqueRecipes,
+  uniqueFilms,
   hasAiTextGeneration,
   imageThumbnailBase64,
   blurData,
 }: {
   photo: Photo
-  uniqueTags: TagsWithMeta
+  uniqueTags: Tags
+  uniqueRecipes: Recipes
+  uniqueFilms: Films
   hasAiTextGeneration: boolean
   imageThumbnailBase64: string
   blurData: string
 }) {
-
   const photoForm = convertPhotoToFormData(photo);
 
   const {
@@ -55,9 +60,9 @@ export default function PhotoEditPageClient({
         <div className="flex gap-2">
           {hasAiTextGeneration &&
             <AiButton {...{ aiContent, shouldConfirm: hasTextContent }} />}
-          <ExifSyncButton
-            onSync={setUpdatedExifData}
+          <ExifCaptureButton
             photoUrl={photo.url}
+            onSync={setUpdatedExifData}
           />
         </div>}
       isLoading={pending}
@@ -68,6 +73,8 @@ export default function PhotoEditPageClient({
         updatedExifData={updatedExifData}
         updatedBlurData={blurData}
         uniqueTags={uniqueTags}
+        uniqueRecipes={uniqueRecipes}
+        uniqueFilms={uniqueFilms}
         aiContent={hasAiTextGeneration ? aiContent : undefined}
         onTitleChange={setUpdatedTitle}
         onTextContentChange={setHasTextContent}
